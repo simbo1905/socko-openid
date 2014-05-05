@@ -146,11 +146,18 @@ object SockoOpenIdApp extends Logger {
 
           getSessionCookie match {
             case Some(sessionKey) =>
-              val future = discoveries ? sessionKey
+              val askFuture = discoveries ? sessionKey
 
-              future onSuccess {
+              askFuture onSuccess {
                 case Some(Discovery(_, openId, discoveryInfo)) =>
-                  val authenticated = Try {
+                  log.info(s"have discovery for $openId")
+                  implicit val executionContextIO = ioBoundThreadPool
+                  implicit val timeoutIO = verifyTimeout
+
+                  val start = System.nanoTime()
+
+                  val verifyFuture = future {
+                    log.info(s"trying verify for $openId")
                     val verificationResult = consumerManager.verify(returnUrl, parameters, discoveryInfo)
                     val verifiedIdentifier = verificationResult.getVerifiedId();
                     val authSuccess: AuthSuccess = verificationResult.getAuthResponse().asInstanceOf[AuthSuccess]
@@ -158,24 +165,31 @@ object SockoOpenIdApp extends Logger {
                     val sRegResponse = extension.asInstanceOf[SRegResponse]
                     val email = sRegResponse.getAttributeValue("email")
                     val authentication = Authentication(sessionKey, verifiedIdentifier.getIdentifier(), email)
-                    log.info(s"the authentication with email is ${email}")
-                    sessions ! authentication
+                    log.info(s"verify confirmed email is ${email}")
                     authentication
                   }
-                  authenticated match {
-                    case Success(a) =>
-                      log.info(s"successfully registered $a under sessionKey $sessionKey")
+
+                  log.info(s"verify timeout is $timeoutIO")
+
+                  verifyFuture onSuccess {
+                    case authentication =>
+                      sessions ! authentication
+                      log.info(s"successfully verified $authentication under sessionKey $sessionKey in ${System.nanoTime() - start} ns")
                       bounceTo("/private/private.html")
-                    case Failure(e) =>
-                      log.error(s"error during verify of $sessionKey - $e")
+                  }
+
+                  verifyFuture onFailure {
+                    case e =>
+                      log.error(s"error during verify of $sessionKey : $e")
                       bounceTo("/public/registration.html")
                   }
+
                 case unknown =>
                   log.error(s"unknown discovery message $unknown trying to resolve $sessionKey")
                   bounceTo("/public/registration.html")
               }
 
-              future onFailure {
+              askFuture onFailure {
                 case t =>
                   log.error(s"failed to resolve sessionKey $sessionKey with exception $t")
                   bounceTo("/public/registration.html")
@@ -185,6 +199,7 @@ object SockoOpenIdApp extends Logger {
               log.info(s"no session cookie")
               bounceTo("/public/registration.html")
           }
+
       }
     }
   })
@@ -253,7 +268,7 @@ abstract class SessionsActor(timeout: FiniteDuration) extends Actor with Logger 
           sessions = updatedSessions
           System.out.println(s"have added $a under $sessionKey")
         case Failure(ex) =>
-          log.error(s"failed to add a")
+          log.error(s"failed to add $a")
       }
     case unknown =>
       log.error(s"unknown message $unknown")

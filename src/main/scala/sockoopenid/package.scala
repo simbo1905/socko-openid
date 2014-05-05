@@ -73,6 +73,9 @@ package object sockoopenid {
       # openid4java discovery timeout
       discovery-timeout = 30000 milliseconds
     
+      # verification timeout
+      verify-timeout = 5000 milliseconds
+    
       # return url for openid provider
       return-url = "https://localhost:8888/registerreturn"
     }
@@ -221,6 +224,8 @@ package object sockoopenid {
   }
 
   lazy val discoveryTimeout = Timeout(timeoutMilliseconds("socko-openid.discovery-timeout"))
+
+  lazy val verifyTimeout = Timeout(timeoutMilliseconds("socko-openid.verify-timeout"))
 
   lazy val returnUrl = config.getString("socko-openid.return-url")
 
