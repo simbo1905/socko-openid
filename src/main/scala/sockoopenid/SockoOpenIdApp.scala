@@ -58,7 +58,6 @@ object SockoOpenIdApp extends Logger {
               implicit val timeout = askTimeout
               implicit val ex = cpuBoundThreadPool
               val future = sessions ? cookie
-
               future.onSuccess {
                 case Some(authentication) =>
                   log.info(s"user has authenticated session")
@@ -67,7 +66,6 @@ object SockoOpenIdApp extends Logger {
                   log.info(s"user has cookie but session timed out or was never there got back $x")
                   bounceTo("/public/403.html")
               }
-
               future.onFailure {
                 case ex =>
                   log.info(s"did not get back a session $ex")
@@ -143,18 +141,14 @@ object SockoOpenIdApp extends Logger {
         case GET(PathSegments(Seq("registerreturn"))) =>
           implicit val executionContext = cpuBoundThreadPool
           implicit val timeout = askTimeout
-
           getSessionCookie match {
             case Some(sessionKey) =>
               val askFuture = discoveries ? sessionKey
-
               askFuture onSuccess {
                 case Some(Discovery(_, openId, discoveryInfo)) =>
                   log.info(s"have discovery for $openId")
                   implicit val executionContextIO = ioBoundThreadPool
                   implicit val timeoutIO = verifyTimeout
-
-                  val start = System.nanoTime()
 
                   val verifyFuture = future {
                     log.info(s"trying verify for $openId")
@@ -168,38 +162,30 @@ object SockoOpenIdApp extends Logger {
                     log.info(s"verify confirmed email is ${email}")
                     authentication
                   }
-
-                  log.info(s"verify timeout is $timeoutIO")
-
                   verifyFuture onSuccess {
                     case authentication =>
                       sessions ! authentication
-                      log.info(s"successfully verified $authentication under sessionKey $sessionKey in ${System.nanoTime() - start} ns")
+                      log.info(s"successfully verified $authentication under sessionKey $sessionKey")
                       bounceTo("/private/private.html")
                   }
-
                   verifyFuture onFailure {
                     case e =>
                       log.error(s"error during verify of $sessionKey : $e")
                       bounceTo("/public/registration.html")
                   }
-
                 case unknown =>
                   log.error(s"unknown discovery message $unknown trying to resolve $sessionKey")
                   bounceTo("/public/registration.html")
               }
-
               askFuture onFailure {
                 case t =>
                   log.error(s"failed to resolve sessionKey $sessionKey with exception $t")
                   bounceTo("/public/registration.html")
               }
-
             case None =>
               log.info(s"no session cookie")
               bounceTo("/public/registration.html")
           }
-
       }
     }
   })
@@ -280,6 +266,6 @@ class DiscoverySessions(timeout: FiniteDuration) extends SessionsActor(timeout) 
 }
 
 class AuthenticatedSessions(timeout: FiniteDuration) extends SessionsActor(timeout) {
-  def name = classOf[DiscoverySessions].getSimpleName()
+  def name = classOf[AuthenticatedSessions].getSimpleName()
 }
 
