@@ -6,6 +6,8 @@ Code ported from J Steven Perry's article "OpenID for Java Web applications, Par
 
 http://www.ibm.com/developerworks/library/j-openid/
 
+The write up is over at http://simbo1905.wordpress.com/2014/05/05/openid-authentication-with-socko-webserver/
+
 ## Build Prerequisites
 
   - Java Platform (JDK 6+) http://www.oracle.com/technetwork/java/javase/downloads/index.html
