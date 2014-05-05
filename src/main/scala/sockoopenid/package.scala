@@ -2,11 +2,16 @@
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+
 import scala.Array.canBuildFrom
 import scala.Option.option2Iterable
+import scala.collection.JavaConversions.asScalaBuffer
+import scala.collection.JavaConversions.mapAsJavaMap
+import scala.collection.JavaConversions.mapAsScalaMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
+
 import org.mashupbots.socko.events.HttpRequestEvent
 import org.mashupbots.socko.events.HttpResponseStatus
 import org.mashupbots.socko.handlers.HttpDataFactory
@@ -16,21 +21,23 @@ import org.mashupbots.socko.handlers.StaticFileRequest
 import org.openid4java.consumer.ConsumerManager
 import org.openid4java.consumer.InMemoryConsumerAssociationStore
 import org.openid4java.consumer.InMemoryNonceVerifier
+import org.openid4java.message.ParameterList
+
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+
 import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.util.Timeout
 import io.netty.handler.codec.http.DefaultCookie
 import io.netty.handler.codec.http.HttpHeaders
+import io.netty.handler.codec.http.QueryStringDecoder
 import io.netty.handler.codec.http.ServerCookieEncoder
 import io.netty.handler.codec.http.multipart.Attribute
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder
 import io.netty.handler.codec.http.multipart.InterfaceHttpData
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType
-import sockoopenid.AuthenticatedSessions
-import org.openid4java.message.ParameterList
-import io.netty.handler.codec.http.QueryStringDecoder
+import sockoopenid.SessionsActor
 
 package object sockoopenid {
 
@@ -240,7 +247,7 @@ package object sockoopenid {
    * /user/sessions which is a nice naming coincidence
    */
 
-  actorSystem.actorOf(Props(classOf[AuthenticatedSessions], timeoutMilliseconds("socko-openid.sessions-timeout")), "sessions")
+  actorSystem.actorOf(Props(classOf[SessionsActor], "AuthenticatedSessions", timeoutMilliseconds("socko-openid.sessions-timeout")), "sessions")
 
   def sessions = actorSystem.actorSelection("/user/sessions")
 
@@ -249,7 +256,7 @@ package object sockoopenid {
    * /user/discoveries which is a nice naming coincidence
    */
 
-  actorSystem.actorOf(Props(classOf[DiscoverySessions], timeoutMilliseconds("socko-openid.discovery-timeout")), "discoveries")
+  actorSystem.actorOf(Props(classOf[SessionsActor], "DiscoverySessions", timeoutMilliseconds("socko-openid.discovery-timeout")), "discoveries")
 
   def discoveries = actorSystem.actorSelection("/user/discoveries")
 

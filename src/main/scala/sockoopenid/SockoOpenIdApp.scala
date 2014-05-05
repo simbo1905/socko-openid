@@ -2,11 +2,13 @@ package sockoopenid
 
 import java.io.File
 import java.util.UUID
+
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.future
 import scala.util.Failure
 import scala.util.Success
-import org.mashupbots.socko.events.HttpResponseStatus
+import scala.util.Try
+
 import org.mashupbots.socko.infrastructure.Logger
 import org.mashupbots.socko.routes.GET
 import org.mashupbots.socko.routes.HttpRequest
@@ -18,14 +20,15 @@ import org.mashupbots.socko.webserver.SslConfig
 import org.mashupbots.socko.webserver.WebServer
 import org.mashupbots.socko.webserver.WebServerConfig
 import org.openid4java.discovery.DiscoveryInformation
-import org.openid4java.message.sreg.SRegRequest
-import akka.actor.Actor
-import akka.actor.actorRef2Scala
-import akka.pattern.ask
 import org.openid4java.message.AuthSuccess
 import org.openid4java.message.sreg.SRegMessage
+import org.openid4java.message.sreg.SRegRequest
 import org.openid4java.message.sreg.SRegResponse
-import scala.util.Try
+
+import akka.actor.Actor
+import akka.actor.ActorSelection.toScala
+import akka.actor.actorRef2Scala
+import akka.pattern.ask
 
 sealed trait SessionState {
   def sessionId: String
@@ -228,11 +231,9 @@ object SockoOpenIdApp extends Logger {
 
 }
 
-abstract class SessionsActor(timeout: FiniteDuration) extends Actor with Logger {
+class SessionsActor(val name: String, timeout: FiniteDuration) extends Actor with Logger {
   import scala.concurrent.duration._
   implicit def currentTime: Long = System.currentTimeMillis
-
-  def name: String
 
   log.info(s"$name timeout is $timeout")
   var sessions: Sessions[String, SessionState] = Sessions(timeout)
@@ -259,13 +260,5 @@ abstract class SessionsActor(timeout: FiniteDuration) extends Actor with Logger 
     case unknown =>
       log.error(s"unknown message $unknown")
   }
-}
-
-class DiscoverySessions(timeout: FiniteDuration) extends SessionsActor(timeout) {
-  def name = classOf[DiscoverySessions].getSimpleName()
-}
-
-class AuthenticatedSessions(timeout: FiniteDuration) extends SessionsActor(timeout) {
-  def name = classOf[AuthenticatedSessions].getSimpleName()
 }
 

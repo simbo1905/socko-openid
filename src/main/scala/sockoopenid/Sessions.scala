@@ -1,11 +1,11 @@
 package sockoopenid
 
-import scala.util.Try
-import scala.collection.immutable.Vector
 import scala.collection.immutable.Map
+import scala.collection.immutable.Vector
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Failure
 import scala.util.Success
-import scala.concurrent.duration.FiniteDuration
+import scala.util.Try
 
 /**
  * Sessions[K, V] is an immutable key-value collection where
