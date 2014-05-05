@@ -6,20 +6,6 @@ import scala.collection.immutable.Map
 import scala.util.Failure
 import scala.util.Success
 import scala.concurrent.duration.FiniteDuration
-import akka.actor.Actor
-
-class SessionsActor(timeout: FiniteDuration) extends Actor {
-  import scala.concurrent.duration._
-
-  var sessions: Sessions[String, String] = Sessions(timeout)
-
-  def receive = {
-    case key: String => {
-      System.out.println("sending simbo1905")
-      sender ! "simbo1905"
-    }
-  }
-}
 
 /**
  * Sessions[K, V] is an immutable key-value collection where
@@ -120,13 +106,14 @@ private case class SessionStateInstance[K, V](expiryInterval: Int,
   // vanilla access no refresh of expiry
   def getValueNoRefresh(sessionKey: K)(implicit datetime: Long): Option[V] =
     valuesWithExpiryMap.get(sessionKey) collect {
-      case (value, expiry) if (expiry > datetime) => Some(value)
+      case (value, expiry) if (expiry > datetime) =>
+        Some(value)
     } getOrElse (None)
 
   // gets the value and bumps the expiry by interval
   def getValueWithRefresh(sessionKey: K)(implicit datetime: Long): (Sessions[K, V], Option[V]) = {
     valuesWithExpiryMap.get(sessionKey) collect {
-      case (value, expiry) =>
+      case (value, expiry) if (expiry > datetime) =>
         (SessionStateInstance(this.expiryInterval, sessionVector,
           valuesWithExpiryMap + (sessionKey ->
             (value, datetime + this.expiryInterval))), Some(value))
