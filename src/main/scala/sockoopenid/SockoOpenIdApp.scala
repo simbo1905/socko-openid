@@ -158,6 +158,7 @@ object SockoOpenIdApp extends Logger {
                     val sRegResponse = extension.asInstanceOf[SRegResponse]
                     val email = sRegResponse.getAttributeValue("email")
                     val authentication = Authentication(sessionKey, verifiedIdentifier.getIdentifier(), email)
+                    log.info(s"the authentication with email is ${email}")
                     sessions ! authentication
                     authentication
                   }
