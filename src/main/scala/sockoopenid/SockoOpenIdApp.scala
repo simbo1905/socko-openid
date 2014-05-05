@@ -227,16 +227,14 @@ object SockoOpenIdApp extends Logger {
 
 }
 
-/**
- * Actor handling authenticated sessions which will timeout after a period (e.g. 120s)
- * TODO move both sessions actors logic into common base class
- */
-class AuthenticatedSessions(timeout: FiniteDuration) extends Actor with Logger {
+abstract class SessionsActor(timeout: FiniteDuration) extends Actor with Logger {
   import scala.concurrent.duration._
   implicit def currentTime: Long = System.currentTimeMillis
 
-  log.info(s"authenticated session timeout is $timeout")
-  var sessions: Sessions[String, Authentication] = Sessions(timeout)
+  def name: String
+
+  log.info(s"$name timeout is $timeout")
+  var sessions: Sessions[String, SessionState] = Sessions(timeout)
 
   def receive = {
     case sessionKey: String =>
@@ -248,7 +246,8 @@ class AuthenticatedSessions(timeout: FiniteDuration) extends Actor with Logger {
           sender ! None
           updatedSessions
       }
-    case a @ Authentication(sessionKey, _, _) =>
+    case a: SessionState =>
+      val sessionKey = a.sessionId
       (sessions - sessionKey) + (sessionKey, a) match {
         case Success(updatedSessions) =>
           sessions = updatedSessions
@@ -261,38 +260,11 @@ class AuthenticatedSessions(timeout: FiniteDuration) extends Actor with Logger {
   }
 }
 
-/**
- * Actor handling discovery sessions whilst the user is away authenticating.
- * The timeout will match the openid4java nonce timeout.
- * TODO move both sessions actors logic into common base class
- */
-class DiscoverySessions(timeout: FiniteDuration) extends Actor with Logger {
-  import scala.concurrent.duration._
-  implicit def currentTime: Long = System.currentTimeMillis
+class DiscoverySessions(timeout: FiniteDuration) extends SessionsActor(timeout) {
+  def name = classOf[DiscoverySessions].getSimpleName()
+}
 
-  log.info(s"discovery session timeout is $timeout")
-  var sessions: Sessions[String, Discovery] = Sessions(timeout)
-
-  def receive = {
-    case sessionKey: String =>
-      sessions = sessions(sessionKey) match {
-        case (updatedSessions, Some(discovery)) =>
-          sender ! Some(discovery)
-          updatedSessions
-        case (updatedSessions, None) =>
-          sender ! None
-          updatedSessions
-      }
-    case d @ Discovery(sessionKey, _, _) =>
-      (sessions - sessionKey) + (sessionKey, d) match {
-        case Success(updatedSessions) =>
-          sessions = updatedSessions
-          System.out.println(s"have added $d under $sessionKey")
-        case Failure(ex) =>
-          log.error(s"failed to add d")
-      }
-    case unknown =>
-      log.error(s"unknown message $unknown")
-  }
+class AuthenticatedSessions(timeout: FiniteDuration) extends SessionsActor(timeout) {
+  def name = classOf[DiscoverySessions].getSimpleName()
 }
 
