@@ -1,6 +1,10 @@
 # Socko OpenID
 
-An example project for protecting a websocket app running on socko with openid authentication. 
+An example project for protecting an area of a webapp running on socko using openid authentication using openid4java. 
+
+Code ported from J Steven Perry's article "OpenID for Java Web applications, Part 1: Enable your Java Web applications to use OpenID authentication"
+
+http://www.ibm.com/developerworks/library/j-openid/
 
 ## Build Prerequisites
 
